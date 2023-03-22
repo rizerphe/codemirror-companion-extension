@@ -1,13 +1,13 @@
-# codemirror-extension-inline-suggestion
+# codemirror-companion-extension
 
-This package implements inline suggestions for the CodeMirror code editor.
+This package implements inline suggestions for the CodeMirror code editor. It's a backward-compatible fork of [saminzadeh's](https://github.com/saminzadeh/codemirror-extension-inline-suggestion/) project that allows the user to display text different than that being accepted, and to instantly trigger the completion function upon accepting the previous completion.
 
 ![Screenshot](example.png)
 
 ## Install
 
 ```bash
-npm install codemirror-extension-inline-suggestion --save
+npm install codemirror-companion-extension --save
 ```
 
 ## Usage
@@ -16,7 +16,7 @@ npm install codemirror-extension-inline-suggestion --save
 
 ```tsx
 import CodeMirror from '@uiw/react-codemirror';
-import { inlineSuggestion } from 'codemirror-extension-inline-suggestion';
+import { inlineSuggestion } from 'codemirror-companion-extension';
 
 const fetchSuggestion = async (state) => {
   // or make an async API call here based on editor state
