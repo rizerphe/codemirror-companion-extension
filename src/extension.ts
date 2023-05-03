@@ -220,7 +220,7 @@ type InlineSuggestionOptions = {
   fetchFn: (state: EditorState) => Promise<string | Suggestion>;
   delay?: number;
   continue_suggesting?: boolean;
-  accept_shortcut?: string;
+  accept_shortcut?: string | null;
 };
 
 // This is for backwards compatibility
@@ -247,15 +247,21 @@ export function inlineSuggestion(options: InlineSuggestionOptions) {
   const { delay = 500, accept_shortcut = 'Tab' } = options;
   const fetchFn = toSuggestionFn(options.fetchFn);
   const { debounced: debounced_fetchFn } = debouncePromise(fetchFn, delay);
-  return [
-    InlineSuggestionState,
-    fetchSuggestion(debounced_fetchFn),
-    renderInlineSuggestionPlugin,
-    new inlineSuggestionKeymap(
-      options.continue_suggesting ? fetchFn : null,
-      accept_shortcut
-    ).keymap,
-  ];
+  return accept_shortcut
+    ? [
+        InlineSuggestionState,
+        fetchSuggestion(debounced_fetchFn),
+        renderInlineSuggestionPlugin,
+        new inlineSuggestionKeymap(
+          options.continue_suggesting ? fetchFn : null,
+          accept_shortcut
+        ).keymap,
+      ]
+    : [
+        InlineSuggestionState,
+        fetchSuggestion(debounced_fetchFn),
+        renderInlineSuggestionPlugin,
+      ];
 }
 
 export function forceableInlineSuggestion(options: InlineSuggestionOptions) {
@@ -266,15 +272,21 @@ export function forceableInlineSuggestion(options: InlineSuggestionOptions) {
     delay
   );
   return {
-    extension: [
-      InlineSuggestionState,
-      fetchSuggestion(debounced_fetchFn),
-      renderInlineSuggestionPlugin,
-      new inlineSuggestionKeymap(
-        options.continue_suggesting ? fetchFn : null,
-        accept_shortcut
-      ).keymap,
-    ],
+    extension: accept_shortcut
+      ? [
+          InlineSuggestionState,
+          fetchSuggestion(debounced_fetchFn),
+          renderInlineSuggestionPlugin,
+          new inlineSuggestionKeymap(
+            options.continue_suggesting ? fetchFn : null,
+            accept_shortcut
+          ).keymap,
+        ]
+      : [
+          InlineSuggestionState,
+          fetchSuggestion(debounced_fetchFn),
+          renderInlineSuggestionPlugin,
+        ],
     force_fetch: force_fetch,
   };
 }
