@@ -42,6 +42,24 @@ function App() {
 export default App;
 ```
 
+Alternatively, you can use `forceableInlineSuggestion` to trigger the suggestion forcefully:
+
+```tsx
+export default function App() {
+  const { extension, force_fetch } = forceableInlineSuggestion({
+    fetchFn: () => 'hello',
+    delay: 25000,
+    continue_suggesting: true,
+  });
+  return (
+    <>
+      <CodeMirror extensions={[extension]} />
+      <button onClick={force_fetch}>Generate a completion</button>
+    </>
+  );
+}
+```
+
 ## License
 
 MIT
