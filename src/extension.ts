@@ -131,12 +131,12 @@ class inlineSuggestionKeymap {
   suggestFn: InlineFetchFn | null;
   keymap: any;
 
-  constructor(suggestFn: InlineFetchFn | null) {
+  constructor(suggestFn: InlineFetchFn | null, accept_shortcut: string) {
     this.suggestFn = suggestFn;
     this.keymap = Prec.highest(
       keymap.of([
         {
-          key: 'Tab',
+          key: accept_shortcut,
           run: (view: EditorView) => {
             return this.run(view);
           },
@@ -220,6 +220,7 @@ type InlineSuggestionOptions = {
   fetchFn: (state: EditorState) => Promise<string | Suggestion>;
   delay?: number;
   continue_suggesting?: boolean;
+  accept_shortcut?: string;
 };
 
 // This is for backwards compatibility
@@ -243,14 +244,16 @@ function toSuggestionFn(
 }
 
 export function inlineSuggestion(options: InlineSuggestionOptions) {
-  const { delay = 500 } = options;
+  const { delay = 500, accept_shortcut = 'Tab' } = options;
   const fetchFn = toSuggestionFn(options.fetchFn);
   const debounced_fetchFn = debouncePromise(fetchFn, delay);
   return [
     InlineSuggestionState,
     fetchSuggestion(debounced_fetchFn),
     renderInlineSuggestionPlugin,
-    new inlineSuggestionKeymap(options.continue_suggesting ? fetchFn : null)
-      .keymap,
+    new inlineSuggestionKeymap(
+      options.continue_suggesting ? fetchFn : null,
+      accept_shortcut
+    ).keymap,
   ];
 }
