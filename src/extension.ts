@@ -23,6 +23,7 @@ import { debouncePromise } from './lib/utils';
 export type Suggestion = {
   complete_suggestion: string;
   display_suggestion: string;
+  accept_hook?: () => void;
 };
 
 // Current state of the autosuggestion
@@ -162,6 +163,7 @@ class inlineSuggestionKeymap {
         view.state.selection.main.head
       ),
     });
+    suggestion.accept_hook?.();
 
     // Re-trigger the suggestion
     const retrigger = async () => {
@@ -172,6 +174,7 @@ class inlineSuggestionKeymap {
           suggestion: {
             complete_suggestion: result.complete_suggestion,
             display_suggestion: result.display_suggestion,
+            accept_hook: result.accept_hook,
           },
           doc: null,
         }),
