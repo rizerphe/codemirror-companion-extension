@@ -2,15 +2,23 @@
  * @param f callback
  * @param wait milliseconds
  * @param abortValue if has abortValue, promise will reject it if
- * @returns Promise
+ * @returns debounced: Promise, force: {force: () => void}
  */
 export function debouncePromise<T extends (...args: any[]) => any>(
   fn: T,
   wait: number,
   abortValue: any = undefined
-) {
+): {
+  debounced: (...args: Parameters<T>) => Promise<Awaited<ReturnType<T>>>;
+  force: { force: () => void };
+} {
   let cancel = () => {
     // do nothing
+  };
+  const force = {
+    force: () => {
+      // do nothing
+    },
   };
   // type Awaited<T> = T extends PromiseLike<infer U> ? U : T
   type ReturnT = Awaited<ReturnType<T>>;
@@ -24,7 +32,12 @@ export function debouncePromise<T extends (...args: any[]) => any>(
           reject(abortValue);
         }
       };
+      force.force = () => {
+        clearTimeout(timer);
+        resolve(fn(...args));
+      };
     });
   };
-  return wrapFunc;
+
+  return { debounced: wrapFunc, force };
 }

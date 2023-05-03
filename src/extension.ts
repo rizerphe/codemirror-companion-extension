@@ -246,7 +246,7 @@ function toSuggestionFn(
 export function inlineSuggestion(options: InlineSuggestionOptions) {
   const { delay = 500, accept_shortcut = 'Tab' } = options;
   const fetchFn = toSuggestionFn(options.fetchFn);
-  const debounced_fetchFn = debouncePromise(fetchFn, delay);
+  const { debounced: debounced_fetchFn } = debouncePromise(fetchFn, delay);
   return [
     InlineSuggestionState,
     fetchSuggestion(debounced_fetchFn),
@@ -256,4 +256,25 @@ export function inlineSuggestion(options: InlineSuggestionOptions) {
       accept_shortcut
     ).keymap,
   ];
+}
+
+export function forceableInlineSuggestion(options: InlineSuggestionOptions) {
+  const { delay = 500, accept_shortcut = 'Tab' } = options;
+  const fetchFn = toSuggestionFn(options.fetchFn);
+  const { debounced: debounced_fetchFn, force: force_fetch } = debouncePromise(
+    fetchFn,
+    delay
+  );
+  return {
+    extension: [
+      InlineSuggestionState,
+      fetchSuggestion(debounced_fetchFn),
+      renderInlineSuggestionPlugin,
+      new inlineSuggestionKeymap(
+        options.continue_suggesting ? fetchFn : null,
+        accept_shortcut
+      ).keymap,
+    ],
+    force_fetch: force_fetch,
+  };
 }
