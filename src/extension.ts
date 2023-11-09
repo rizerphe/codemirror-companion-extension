@@ -87,7 +87,7 @@ type InlineFetchFn = (state: EditorState) => AsyncGenerator<Suggestion>;
 
 export const fetchSuggestion = (fetchFn: InlineFetchFn) => {
   let suggestionId = 0;
-  ViewPlugin.fromClass(
+  return ViewPlugin.fromClass(
     class FetchPlugin {
       async update(update: ViewUpdate) {
         const doc = update.state.doc;
