@@ -230,7 +230,9 @@ function insertCompletionText(
 }
 
 type InlineSuggestionOptions = {
-  fetchFn: (state: EditorState) => Promise<string | Suggestion>;
+  fetchFn: (
+    state: EditorState
+  ) => Promise<string | Suggestion> | AsyncGenerator<Suggestion>;
   delay?: number;
   continue_suggesting?: boolean;
   accept_shortcut?: string | null;
