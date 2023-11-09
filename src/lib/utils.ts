@@ -41,3 +41,42 @@ export function debouncePromise<T extends (...args: any[]) => any>(
 
   return { debounced: wrapFunc, force: () => force.force() };
 }
+
+export function debounceAsyncGenerator<TParams, T, TReturn, TNext>(
+  fn: (...args: TParams[]) => AsyncGenerator<T, TReturn, TNext>,
+  wait: number,
+  abortValue: any = undefined
+): {
+  debounced: (...args: TParams[]) => AsyncGenerator<T, TReturn, TNext>;
+  force: () => void;
+} {
+  const force = {
+    force: () => {
+      // do nothing
+    },
+  };
+  let timer: number | null = null;
+
+  async function* wrapFunc(
+    ...args: TParams[]
+  ): AsyncGenerator<T, TReturn, TNext> {
+    timer && clearTimeout(timer);
+
+    try {
+      await new Promise<void>((resolve) => {
+        timer = setTimeout(() => resolve(), wait);
+        force.force = () => {
+          timer && clearTimeout(timer);
+          resolve();
+        };
+      });
+    } catch (e) {
+      if (abortValue !== undefined) {
+        throw abortValue;
+      }
+    }
+
+    return yield* fn(...args);
+  }
+  return { debounced: wrapFunc, force: () => force.force() };
+}

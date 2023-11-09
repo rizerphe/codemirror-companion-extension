@@ -16,7 +16,7 @@ import {
   EditorSelection,
   TransactionSpec,
 } from '@codemirror/state';
-import { debouncePromise } from './lib/utils';
+import { debounceAsyncGenerator } from './lib/utils';
 
 // Splitting this up to allow  someone to display a whole sentence as a suggestion
 // while only letting the tab key insert the next word etc.
@@ -83,7 +83,7 @@ class InlineSuggestionWidget extends WidgetType {
   }
 }
 
-type InlineFetchFn = (state: EditorState) => Promise<Suggestion>;
+type InlineFetchFn = (state: EditorState) => AsyncGenerator<Suggestion>;
 
 export const fetchSuggestion = (fetchFn: InlineFetchFn) =>
   ViewPlugin.fromClass(
@@ -94,10 +94,14 @@ export const fetchSuggestion = (fetchFn: InlineFetchFn) =>
         if (!update.docChanged) {
           return;
         }
-        const result = await fetchFn(update.state);
-        update.view.dispatch({
-          effects: InlineSuggestionEffect.of({ suggestion: result, doc: doc }),
-        });
+        for await (const result of fetchFn(update.state)) {
+          update.view.dispatch({
+            effects: InlineSuggestionEffect.of({
+              suggestion: result,
+              doc: doc,
+            }),
+          });
+        }
       }
     }
   );
@@ -168,17 +172,18 @@ class inlineSuggestionKeymap {
     // Re-trigger the suggestion
     const retrigger = async () => {
       if (this.suggestFn == null) return;
-      const result = await this.suggestFn(view.state);
-      view.dispatch({
-        effects: InlineSuggestionEffect.of({
-          suggestion: {
-            complete_suggestion: result.complete_suggestion,
-            display_suggestion: result.display_suggestion,
-            accept_hook: result.accept_hook,
-          },
-          doc: null,
-        }),
-      });
+      for await (const result of this.suggestFn(view.state)) {
+        view.dispatch({
+          effects: InlineSuggestionEffect.of({
+            suggestion: {
+              complete_suggestion: result.complete_suggestion,
+              display_suggestion: result.display_suggestion,
+              accept_hook: result.accept_hook,
+            },
+            doc: null,
+          }),
+        });
+      }
     };
     retrigger();
 
@@ -235,18 +240,32 @@ function toSuggestion(suggestion: string | Suggestion): Suggestion {
 }
 
 function toSuggestionFn(
-  fetchFn: (state: EditorState) => Promise<string | Suggestion>
+  fetchFn: (
+    state: EditorState
+  ) => Promise<string | Suggestion> | AsyncGenerator<Suggestion>
 ): InlineFetchFn {
-  return async (state: EditorState) => {
+  return async function* (state: EditorState) {
     const suggestion = await fetchFn(state);
-    return toSuggestion(suggestion);
+
+    // If it's a string or a Suggestion
+    if (typeof suggestion === 'string' || 'complete_suggestion' in suggestion) {
+      yield toSuggestion(suggestion);
+      return;
+    }
+
+    for await (const s of suggestion) {
+      yield toSuggestion(s);
+    }
   };
 }
 
 export function inlineSuggestion(options: InlineSuggestionOptions) {
   const { delay = 500, accept_shortcut = 'Tab' } = options;
   const fetchFn = toSuggestionFn(options.fetchFn);
-  const { debounced: debounced_fetchFn } = debouncePromise(fetchFn, delay);
+  const { debounced: debounced_fetchFn } = debounceAsyncGenerator(
+    fetchFn,
+    delay
+  );
   return accept_shortcut
     ? [
         InlineSuggestionState,
@@ -267,10 +286,8 @@ export function inlineSuggestion(options: InlineSuggestionOptions) {
 export function forceableInlineSuggestion(options: InlineSuggestionOptions) {
   const { delay = 500, accept_shortcut = 'Tab' } = options;
   const fetchFn = toSuggestionFn(options.fetchFn);
-  const { debounced: debounced_fetchFn, force: force_fetch } = debouncePromise(
-    fetchFn,
-    delay
-  );
+  const { debounced: debounced_fetchFn, force: force_fetch } =
+    debounceAsyncGenerator(fetchFn, delay);
   return {
     extension: accept_shortcut
       ? [
