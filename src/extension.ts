@@ -134,6 +134,7 @@ const renderInlineSuggestionPlugin = ViewPlugin.fromClass(RenderPlugin, {
 class inlineSuggestionKeymap {
   suggestFn: InlineFetchFn | null;
   keymap: any;
+  completionId: number;
 
   constructor(suggestFn: InlineFetchFn | null, accept_shortcut: string) {
     this.suggestFn = suggestFn;
@@ -147,6 +148,7 @@ class inlineSuggestionKeymap {
         },
       ])
     );
+    this.completionId = 0;
   }
 
   run = (view: EditorView) => {
@@ -172,7 +174,9 @@ class inlineSuggestionKeymap {
     // Re-trigger the suggestion
     const retrigger = async () => {
       if (this.suggestFn == null) return;
+      const completionId = ++this.completionId;
       for await (const result of this.suggestFn(view.state)) {
+        if (completionId != this.completionId) return;
         view.dispatch({
           effects: InlineSuggestionEffect.of({
             suggestion: {
