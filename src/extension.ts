@@ -85,7 +85,8 @@ class InlineSuggestionWidget extends WidgetType {
 
 type InlineFetchFn = (state: EditorState) => AsyncGenerator<Suggestion>;
 
-export const fetchSuggestion = (fetchFn: InlineFetchFn) =>
+export const fetchSuggestion = (fetchFn: InlineFetchFn) => {
+  let suggestionId = 0;
   ViewPlugin.fromClass(
     class FetchPlugin {
       async update(update: ViewUpdate) {
@@ -94,7 +95,9 @@ export const fetchSuggestion = (fetchFn: InlineFetchFn) =>
         if (!update.docChanged) {
           return;
         }
+        const currentSuggestionId = ++suggestionId;
         for await (const result of fetchFn(update.state)) {
+          if (currentSuggestionId != suggestionId) return;
           update.view.dispatch({
             effects: InlineSuggestionEffect.of({
               suggestion: result,
@@ -105,6 +108,7 @@ export const fetchSuggestion = (fetchFn: InlineFetchFn) =>
       }
     }
   );
+};
 
 class RenderPlugin {
   decorations: DecorationSet;
