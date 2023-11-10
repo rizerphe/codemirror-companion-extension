@@ -42,12 +42,12 @@ export function debouncePromise<T extends (...args: any[]) => any>(
   return { debounced: wrapFunc, force: () => force.force() };
 }
 
-export function debounceAsyncGenerator<TParams, T, TReturn, TNext>(
-  fn: (...args: TParams[]) => AsyncGenerator<T, TReturn, TNext>,
+export function debounceAsyncGenerator<TParams, T>(
+  fn: (...args: TParams[]) => AsyncGenerator<T, void, void>,
   wait: number,
   abortValue: any = undefined
 ): {
-  debounced: (...args: TParams[]) => AsyncGenerator<T, TReturn, TNext>;
+  debounced: (...args: TParams[]) => AsyncGenerator<T, void, void>;
   force: () => void;
 } {
   const force = {
@@ -57,14 +57,13 @@ export function debounceAsyncGenerator<TParams, T, TReturn, TNext>(
   };
   let timer: number | null = null;
 
-  async function* wrapFunc(
-    ...args: TParams[]
-  ): AsyncGenerator<T, TReturn, TNext> {
+  async function* wrapFunc(...args: TParams[]): AsyncGenerator<T, void, void> {
     timer && clearTimeout(timer);
+    let own_timer: number | null = null;
 
     try {
       await new Promise<void>((resolve) => {
-        timer = setTimeout(() => resolve(), wait);
+        own_timer = timer = setTimeout(() => resolve(), wait);
         force.force = () => {
           timer && clearTimeout(timer);
           resolve();
@@ -76,7 +75,12 @@ export function debounceAsyncGenerator<TParams, T, TReturn, TNext>(
       }
     }
 
-    return yield* fn(...args);
+    for await (const item of fn(...args)) {
+      if (own_timer !== timer) {
+        break;
+      }
+      yield item;
+    }
   }
   return { debounced: wrapFunc, force: () => force.force() };
 }
